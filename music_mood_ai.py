@@ -11,6 +11,10 @@ st.markdown("Your emotion to playlist mapping")
 recognizer = HSEmotionRecognizer(model_name='enet_b0_8_best_afew')
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
+if face_cascade.empty():
+    st.error("Failed to load the face detection model. Please reload the app.")
+    st.stop()
+
 EMOTION_MOOD_MAP = {
     "Happy": "upbeat pop dance",
     "Sad": "chill acoustic lofi",
@@ -30,11 +34,32 @@ def search_itunes(query):
     response.raise_for_status()
     return response.json()
 
-camera = st.camera_input("Show your face")
+tab1, tab2 = st.tabs(["Use Camera", "Upload Photo"])
 
-if camera:
-    img_array = np.frombuffer(camera.getvalue(), np.uint8)
+image_data = None
+
+with tab1:
+    camera_image = st.camera_input("Show your face")
+    if camera_image:
+        image_data = camera_image.getvalue()
+    st.caption(
+        "If the camera doesn't open, click the camera icon in your browser's address bar "
+        "and allow camera access, then reload the page. Or use the Upload Photo tab instead."
+    )
+
+with tab2:
+    uploaded_file = st.file_uploader("Upload a photo with your face", type=["jpg", "jpeg", "png"])
+    if uploaded_file:
+        image_data = uploaded_file.getvalue()
+
+if image_data:
+    img_array = np.frombuffer(image_data, np.uint8)
     frame = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+
+    if frame is None:
+        st.error("Could not read the image. Please try a different photo.")
+        st.stop()
+
     frame = cv2.flip(frame, 1)
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
